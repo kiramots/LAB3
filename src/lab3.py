@@ -1,198 +1,286 @@
-# ============================= УВАГА! =============================
-# Цей файл містить ПРИКЛАД виконання лабораторної роботи.
-# Ваше завдання - розробити ВЛАСНУ програму згідно з вашим варіантом.
-#
-# Ви можете використовувати цей код як зразок, але не копіювати його.
-# Повністю замініть цей код своєю реалізацією.
-#
-# Ваш код повинен відповідати таким вимогам:
-# 1. Обрана предметна область згідно з вашим варіантом.
-# 2. Реалізовано всі необхідні функції:
-#    - додавання, видалення, оновлення даних
-#    - пошук та фільтрація
-#    - обчислення статистик (середнє, min/max)
-#    - групування та агрегація
-# 3. Використано map(), filter(), reduce(), сортування, зрізи.
-# 4. Реалізовано операції з множинами та словниками.
-# 5. Створено інтерактивне меню для користувача.
-# =================================================================
-
-from collections import defaultdict
 from functools import reduce
-import datetime
 
-# Приклад: Аналіз даних про продажі
-# ЗАМІНІТЬ ЦІ ДАНІ ТА ЛОГІКУ НА ВАШІ ВЛАСНІ
+# Кортеж статусів
+STATUSES = ("New", "In Progress", "Completed")
 
-# 1. Підготовка даних
-sales_data = [
-    {"date": "2023-01-01", "product": "Laptop", "category": "Electronics", "price": 1200, "quantity": 5},
-    {"date": "2023-01-02", "product": "Smartphone", "category": "Electronics", "price": 800, "quantity": 10},
-    {"date": "2023-01-03", "product": "T-shirt", "category": "Clothing", "price": 20, "quantity": 50},
-    {"date": "2023-01-04", "product": "Jeans", "category": "Clothing", "price": 60, "quantity": 30},
-    {"date": "2023-01-05", "product": "Keyboard", "category": "Electronics", "price": 75, "quantity": 20},
+# Список проектів
+projects = ["Website", "Mobile App", "Database"]
+
+# Список виконавців + посада
+executors = {
+    "Olena": "Developer",
+    "Ivan": "Tester",
+    "Maria": "Designer",
+    "Petro": "Developer",
+}
+
+# Список завдань
+tasks = [
+    {"id": 1, "title": "Main page layout", "project": "Website",
+     "assignee": "Maria", "priority": 2, "hours": 8, "status": "Completed"},
+    {"id": 2, "title": "Page layout", "project": "Website",
+     "assignee": "Olena", "priority": 3, "hours": 12, "status": "In Progress"},
+    {"id": 3, "title": "Login form testing", "project": "Website",
+     "assignee": "Ivan", "priority": 4, "hours": 5, "status": "New"},
+    {"id": 4, "title": "Authorization screen", "project": "Mobile App",
+     "assignee": "Olena", "priority": 5, "hours": 10, "status": "In Progress"},
+    {"id": 5, "title": "Application icons", "project": "Mobile App",
+     "assignee": "Maria", "priority": 1, "hours": 6, "status": "New"},
+    {"id": 6, "title": "Table schema", "project": "Database",
+     "assignee": "Petro", "priority": 5, "hours": 15, "status": "Completed"},
+    {"id": 7, "title": "Query optimization", "project": "Database",
+     "assignee": "Petro", "priority": 3, "hours": 9, "status": "New"},
 ]
 
-# 2. Функції для роботи з даними
-def add_sale(data, sale):
-    """Додає новий запис про продаж."""
-    data.append(sale)
-    print("Продаж додано успішно.")
 
-def remove_sale(data, index):
-    """Видаляє запис про продаж за індексом."""
-    if 0 <= index < len(data):
-        del data[index]
-        print("Продаж видалено успішно.")
+# Допоміжні функції
+def print_tasks(task_list):
+    """Виводить список завдань у вигляді таблиці."""
+    if not task_list:
+        print("No tasks found.")
+        return
+    print(f"{'ID':<4}{'Title':<26}{'Project':<19}{'Assignee':<12}"
+          f"{'Priority':<8}{'Hours':<6}{'Status'}")
+    print("-" * 85)
+    for t in task_list:
+        print(f"{t['id']:<4}{t['title']:<26}{t['project']:<19}{t['assignee']:<12}"
+              f"{t['priority']:<8}{t['hours']:<6}{t['status']}")
+
+
+def input_int(text):
+    while True:
+        try:
+            return int(input(text))
+        except ValueError:
+            print("Please enter an integer.")
+
+
+def choose_from(options, text):
+    """Просить обрати значення (проекти, виконавці, статуси)."""
+    options = list(options)
+    while True:
+        value = input(f"{text} {options}: ").strip()
+        if value in options:
+            return value
+        print("Invalid option. Please try again.")
+
+
+def find_task(task_id):
+    """Повертає завдання за id або None."""
+    for t in tasks:
+        if t["id"] == task_id:
+            return t
+    return None
+
+def add_task():
+    # Новий id = максимальний існуючий + 1
+    new_id = max((t["id"] for t in tasks), default=0) + 1
+    title = input("Task title: ").strip()
+    project = choose_from(projects, "Project")
+    assignee = choose_from(executors, "Assignee")
+    priority = input_int("Priority (1-5): ")
+    hours = input_int("Estimated hours: ")
+    tasks.append({"id": new_id, "title": title, "project": project,
+                  "assignee": assignee, "priority": priority,
+                  "hours": hours, "status": "New"})
+    print(f"Task #{new_id} added.")
+
+
+def delete_task():
+    task = find_task(input_int("Enter task ID to delete: "))
+    if task:
+        tasks.remove(task)
+        print("Task deleted.")
     else:
-        print("Невірний індекс.")
+        print("Task with this ID was not found.")
 
-def update_sale(data, index, key, value):
-    """Оновлює інформацію про продаж."""
-    if 0 <= index < len(data):
-        # Перетворення значення до відповідного типу
-        if key in ['price', 'quantity']:
-            try:
-                value = float(value) if key == 'price' else int(value)
-            except ValueError:
-                print(f"Невірний тип значення для ключа '{key}'")
-                return
-        data[index][key] = value
-        print("Інформацію оновлено успішно.")
+
+def update_task():
+    task = find_task(input_int("Enter task ID to update: "))
+    if not task:
+        print("Task with this ID was not found.")
+        return
+    print("What do you want to update? 1 - status, 2 - assignee, 3 - hours")
+    choice = input("Your choice: ")
+    if choice == "1":
+        task["status"] = choose_from(STATUSES, "New status")
+    elif choice == "2":
+        task["assignee"] = choose_from(executors, "New assignee")
+    elif choice == "3":
+        task["hours"] = input_int("New number of hours: ")
     else:
-        print("Невірний індекс.")
+        print("Invalid choice.")
+        return
+    print("Task updated.")
 
-def find_sales_by_product(data, product):
-    """Знаходить всі продажі конкретного продукту."""
-    return list(filter(lambda x: x["product"].lower() == product.lower(), data))
 
-# 3. Специфічні функції аналізу
-def calculate_total_sales(data):
-    """Обчислює загальну суму продажів."""
-    return reduce(lambda acc, sale: acc + sale["price"] * sale["quantity"], data, 0)
+# Пошук і фільтрація
+def search_by_title():
+    word = input("Enter a word to search: ").lower()
+    result = [t for t in tasks if word in t["title"].lower()]
+    print_tasks(result)
 
-def calculate_average_price(data):
-    """Обчислює середню ціну товару."""
-    prices = [sale["price"] for sale in data]
-    return sum(prices) / len(prices) if prices else 0
 
-# 4. Вбудовані функції та методи
-def sort_sales_by_date(data):
-    """Сортує продажі за датою."""
-    return sorted(data, key=lambda x: datetime.datetime.strptime(x["date"], "%Y-%m-%d"))
+def filter_tasks():
+    print("Filter: 1 - by status, 2 - by assignee, 3 - by project")
+    choice = input("Your choice: ")
+    if choice == "1":
+        value = choose_from(STATUSES, "Status")
+        key = "status"
+    elif choice == "2":
+        value = choose_from(executors, "Assignee")
+        key = "assignee"
+    elif choice == "3":
+        value = choose_from(projects, "Project")
+        key = "project"
+    else:
+        print("Invalid choice.")
+        return
+    # filter() залишає лише завдання, що відповідають умові
+    result = list(filter(lambda t: t[key] == value, tasks))
+    print_tasks(result)
 
-# 5. Робота з множинами та словниками
-def group_sales_by_category(data):
-    """Групує продажі за категоріями."""
-    categories = defaultdict(list)
-    for sale in data:
-        categories[sale["category"]].append(sale)
-    return dict(categories)
 
-def find_best_selling_product(data):
-    """Знаходить товар, який найкраще продається."""
-    if not data:
-        return None
-    products = defaultdict(int)
-    for sale in data:
-        products[sale["product"]] += sale["quantity"]
-    return max(products, key=products.get)
+# Статистика, групування, агрегація
+def show_statistics():
+    if not tasks:
+        print("No data.")
+        return
+    hours_list = [t["hours"] for t in tasks]
+    print(f"Number of tasks: {len(tasks)}")
+    print(f"Average duration: {sum(hours_list) / len(hours_list):.1f} hours")
+    longest = max(tasks, key=lambda t: t["hours"])
+    shortest = min(tasks, key=lambda t: t["hours"])
+    print(f"Longest task: {longest['title']} ({longest['hours']} hours)")
+    print(f"Shortest task: {shortest['title']} ({shortest['hours']} hours)")
 
-# 6. Інтерактивне меню
-def print_menu():
-    """Виводить меню опцій."""
-    print("\n==== Меню аналізу продажів (ПРИКЛАД) ====")
-    print("1. Показати всі продажі")
-    print("2. Додати новий продаж")
-    print("3. Видалити продаж")
-    print("4. Оновити інформацію про продаж")
-    print("5. Знайти продажі за назвою товару")
-    print("6. Обчислити загальну суму продажів")
-    print("7. Групувати продажі за категоріями")
-    print("8. Сортувати продажі за датою")
-    print("9. Знайти товар, який найкраще продається")
-    print("10. Обчислити середню ціну товару")
-    print("0. Вийти")
+
+def group_by(key):
+    """Групує завдання за ключем у словник."""
+    groups = {}
+    for t in tasks:
+        groups.setdefault(t[key], []).append(t)
+    return groups
+
+
+def show_grouping():
+    key = "project" if input("Group by: 1 - project, 2 - assignee: ") == "1" else "assignee"
+    for name, group in group_by(key).items():
+        total = sum(t["hours"] for t in group)
+        avg_priority = sum(t["priority"] for t in group) / len(group)
+        print(f"{name}: tasks - {len(group)}, hours - {total}, "
+              f"average priority - {avg_priority:.1f}")
+
+
+def show_functional():
+    # map перетворює години у робочі дні (8 год = 1 день)
+    days = list(map(lambda t: (t["title"], round(t["hours"] / 8, 1)), tasks))
+    print("Duration in working days (first 3):")
+    for title, d in days[:3]:
+        print(f"  {title}: {d} days")
+
+    # filter невиконані завдання
+    not_done = list(filter(lambda t: t["status"] != "Completed", tasks))
+    print(f"\nUncompleted tasks: {len(not_done)}")
+
+    # reduce загальна кількість годин невиконаних завдань
+    total = reduce(lambda acc, t: acc + t["hours"], not_done, 0)
+    print(f"Remaining working hours: {total}")
+
+
+def show_sorted():
+    print("Sort by: 1 - priority, 2 - hours")
+    key = "priority" if input("Your choice: ") == "1" else "hours"
+    sorted_tasks = sorted(tasks, key=lambda t: t[key], reverse=True)
+    print("Top 3 tasks:")
+    print_tasks(sorted_tasks[:3])
+    print("\nLast 2 tasks in the list:")
+    print_tasks(sorted_tasks[-2:])
+
+
+# Множини та словники
+def assignees_of(project):
+    """Множина виконавців проекту."""
+    return {t["assignee"] for t in tasks if t["project"] == project}
+
+
+def show_sets():
+    p1 = choose_from(projects, "First project")
+    p2 = choose_from(projects, "Second project")
+    s1, s2 = assignees_of(p1), assignees_of(p2)
+    print(f"Assignees of '{p1}': {s1}")
+    print(f"Assignees of '{p2}': {s2}")
+    print(f"Union (working in at least one): {s1 | s2}")
+    print(f"Intersection (working in both): {s1 & s2}")
+    print(f"Difference (only in '{p1}'): {s1 - s2}")
+    # Виконавці, які взагалі не мають завдань
+    free = set(executors) - {t["assignee"] for t in tasks}
+    print(f"Assignees without tasks: {free if free else 'none'}")
+
+
+def show_frequencies():
+    # Словник для підрахунку статусів
+    counter = {}
+    for t in tasks:
+        counter[t["status"]] = counter.get(t["status"], 0) + 1
+    print("Number of tasks by status:")
+    for status, count in counter.items():
+        print(f"  {status}: {count}")
+
+    # Словник індекс: id -- завдання
+    index = {t["id"]: t for t in tasks}
+    print(f"\nID index: {list(index.keys())}")
+    task_id = input_int("Enter ID for quick search: ")
+    if task_id in index:
+        print_tasks([index[task_id]])
+    else:
+        print("This ID is not in the index.")
+
+
+# Меню
+def show_menu():
+    print("\nTask Management System")
+    print("1. Show all tasks")
+    print("2. Add a task")
+    print("3. Delete a task")
+    print("4. Update a task")
+    print("5. Search by title")
+    print("6. Filter tasks")
+    print("7. Statistics (average, min, max)")
+    print("8. Grouping and aggregation")
+    print("9. map / filter / reduce")
+    print("10. Sorting and slicing")
+    print("11. Set operations")
+    print("12. Frequencies and index")
+    print("0. Exit")
+
 
 def main():
-    """Головна функція програми."""
-    global sales_data
+    actions = {
+        "1": lambda: print_tasks(tasks),
+        "2": add_task,
+        "3": delete_task,
+        "4": update_task,
+        "5": search_by_title,
+        "6": filter_tasks,
+        "7": show_statistics,
+        "8": show_grouping,
+        "9": show_functional,
+        "10": show_sorted,
+        "11": show_sets,
+        "12": show_frequencies,
+    }
     while True:
-        print_menu()
-        choice = input("Оберіть опцію: ")
-
-        if choice == "1":
-            if not sales_data:
-                print("Немає даних про продажі.")
-            for i, sale in enumerate(sales_data):
-                print(f"{i}: {sale}")
-        elif choice == "2":
-            try:
-                date = input("Введіть дату (YYYY-MM-DD): ")
-                datetime.datetime.strptime(date, "%Y-%m-%d") # перевірка формату
-                product = input("Введіть назву товару: ")
-                category = input("Введіть категорію: ")
-                price = float(input("Введіть ціну: "))
-                quantity = int(input("Введіть кількість: "))
-                new_sale = {"date": date, "product": product, "category": category, "price": price, "quantity": quantity}
-                add_sale(sales_data, new_sale)
-            except ValueError:
-                print("Помилка введення. Перевірте формат дати, ціни та кількості.")
-        elif choice == "3":
-            try:
-                index = int(input("Введіть індекс продажу для видалення: "))
-                remove_sale(sales_data, index)
-            except ValueError:
-                print("Невірний індекс. Введіть число.")
-        elif choice == "4":
-            try:
-                index = int(input("Введіть індекс продажу для оновлення: "))
-                if not (0 <= index < len(sales_data)):
-                    print("Невірний індекс.")
-                    continue
-                key = input("Введіть ключ для оновлення (date/product/category/price/quantity): ")
-                if key not in sales_data[0]:
-                    print("Невірний ключ.")
-                    continue
-                value = input("Введіть нове значення: ")
-                update_sale(sales_data, index, key, value)
-            except ValueError:
-                print("Невірний індекс. Введіть існуючий числовий індекс.")
-        elif choice == "5":
-            product = input("Введіть назву товару для пошуку: ")
-            results = find_sales_by_product(sales_data, product)
-            if results:
-                for sale in results:
-                    print(sale)
-            else:
-                print(f"Продажі для товару '{product}' не знайдено.")
-        elif choice == "6":
-            total = calculate_total_sales(sales_data)
-            print(f"Загальна сума продажів: {total}")
-        elif choice == "7":
-            grouped = group_sales_by_category(sales_data)
-            for category, sales in grouped.items():
-                print(f"\nКатегорія: {category}:")
-                for sale in sales:
-                    print(f"  {sale}")
-        elif choice == "8":
-            sorted_sales = sort_sales_by_date(sales_data)
-            for sale in sorted_sales:
-                print(sale)
-        elif choice == "9":
-            best_product = find_best_selling_product(sales_data)
-            if best_product:
-                print(f"Товар, який найкраще продається: {best_product}")
-            else:
-                print("Немає даних для аналізу.")
-        elif choice == "10":
-            avg_price = calculate_average_price(sales_data)
-            print(f"Середня ціна товару: {avg_price:.2f}")
-        elif choice == "0":
-            print("Дякуємо за використання програми!")
+        show_menu()
+        choice = input("Select an option: ").strip()
+        if choice == "0":
             break
+        if choice in actions:
+            print()
+            actions[choice]()
         else:
-            print("Невірний вибір. Спробуйте ще раз.")
+            print("Invalid menu option.")
+
 
 if __name__ == "__main__":
     main()
